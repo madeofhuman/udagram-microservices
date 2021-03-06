@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: udagram-frontend
+  labels:
+    app: udagram-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: udagram-frontend
+  template:
+    metadata:
+      labels:
+        app: udagram-frontend
+    spec:
+      containers:
+      - name: udagram-frontend
+        image: madeofhuman/udagram-frontend
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: "500m"  
+            memory: "1Gi"
+          requests:
+            cpu: "250m"
+            memory: "64Mi"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  labels:
+    app: udagram-frontend
+    tier: frontend
+spec:
+  ports:
+  - name: "80"
+    port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: udagram-frontend
+  type: LoadBalancer

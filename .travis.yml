@@ -1,0 +1,21 @@
+language: node_js
+
+node_js:
+  - 14
+
+services:
+  - docker
+
+install:
+  - echo "nothing to be installed"
+
+before_script:
+  - echo "no tests to run"
+
+script:
+  - docker --version
+  - docker-compose build --parallel
+
+after_success:
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  - docker-compose push

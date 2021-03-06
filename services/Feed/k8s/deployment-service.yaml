@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: udagram-feed
+  labels:
+    app: udagram-feed
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: udagram-feed
+  template:
+    metadata:
+      labels:
+        app: udagram-feed
+    spec:
+      containers:
+      - name: udagram-feed
+        image: madeofhuman/udagram-feed
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: "500m"  
+            memory: "1Gi"
+          requests:
+            cpu: "250m"
+            memory: "64Mi"
+        envFrom:
+          - configMapRef:
+              name: env-configs
+          - secretRef:
+              name: env-secrets
+        volumeMounts:
+        - name: env-aws-secrets
+          mountPath: "/root/.aws/"
+          readOnly: true
+      volumes:
+      - name: env-aws-secrets
+        secret:
+          secretName: env-aws-secrets
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: feed-service
+  labels:
+    app: udagram-feed
+    tier: backend
+spec:
+  ports:
+  - name: "8080"
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: udagram-feed

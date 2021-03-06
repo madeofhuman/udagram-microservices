@@ -1,0 +1,7 @@
+/set_env.sh
+/k8s/*secrets.yaml
+node_modules
+.DS_Store
+
+.env
+www
