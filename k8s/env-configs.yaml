@@ -9,4 +9,4 @@ data:
   JWT_SECRET: helloworld
   POSTGRES_DB: udagramodinadev
   POSTGRES_HOST: udagramodinadev.cabhqy2zpuwp.eu-west-2.rds.amazonaws.com
-  URL: http://localhost:8100  
+  CORS_ORIGIN: http://127.0.0.1
