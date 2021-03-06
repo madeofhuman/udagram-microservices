@@ -3,24 +3,12 @@ services:
   udagram-frontend:
     build: ./services/Frontend
     image: madeofhuman/udagram-frontend
-    ports:
-      - 80:80
   udagram-reverse-proxy:
     build: ./services/ReverseProxy
     image: madeofhuman/udagram-reverse-proxy
-    ports:
-      - 8080:8080
   udagram-user:
     build: ./services/User
     image: madeofhuman/udagram-user
-    ports:
-      - 8081:8080
-    env_file: 
-      - ./services/User/.env
   udagram-feed:
     build: ./services/Feed
     image: madeofhuman/udagram-feed
-    ports:
-      - 8082:8080
-    env_file:
-      - ./services/Feed/.env
