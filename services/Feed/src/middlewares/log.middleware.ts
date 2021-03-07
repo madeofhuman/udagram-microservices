@@ -1,15 +1,14 @@
-import * as path from 'path';
 import * as winston from 'winston';
 import * as expressWinston from 'express-winston';
 import { v4 as uuidv4 } from 'uuid';
-
+import * as path from 'path';
 
 const transports = {
   console: new winston.transports.Console(),
   infoFile: new winston.transports.File({
     dirname: path.join(__dirname, '../', '/log/info'),
     filename: 'server_info.log',
-    maxsize: 1024 * 1024 * 15, // 15MB
+    maxsize: 1024 * 1024 * 15,
   }),
   errorFile: new winston.transports.File({
     dirname: path.join(__dirname, '../', '/log/error'),
@@ -20,13 +19,13 @@ const transports = {
 
 const formatter = winston.format.combine(winston.format.timestamp(), winston.format.json());
 
-function generateLogger(loggerType: 'info' | 'error') {
+function generateLog(loggerType: 'info' | 'error') {
   if (loggerType === 'info') {
     return expressWinston.logger({
       transports: [transports.console, transports.infoFile],
       format: formatter,
       msg: (req, res) => {
-        return `request id - ${uuidv4()}`;
+        return `request id: ${uuidv4()}`;
       },
     });
   } else if (loggerType === 'error') {
@@ -34,12 +33,11 @@ function generateLogger(loggerType: 'info' | 'error') {
       transports: [transports.console, transports.errorFile],
       format: formatter,
       msg: (req, res) => {
-        return `request id - ${uuidv4()}`;
+        return `request id: ${uuidv4()}`;
       },
     });
   }
 }
 
-export const infoLogger = generateLogger('info');
-
-export const errorLogger = generateLogger('error');
+export const errorLog = generateLog('error');
+export const infoLog = generateLog('info');

@@ -9,119 +9,101 @@ import { config } from "../../../config/config";
 const router: Router = Router();
 
 async function generatePassword(plainTextPassword: string): Promise<string> {
-  return bcrypt.hash(plainTextPassword, 10);
+  const saltRounds = 10;
+  const salt = await bcrypt.genSalt(saltRounds);
+  return await bcrypt.hash(plainTextPassword, salt);
 }
 
 async function comparePasswords(plainTextPassword: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(plainTextPassword, hash);
+  return await bcrypt.compare(plainTextPassword, hash);
 }
 
-function generateUserJWT(user: User): string {
-  return jwt.sign({ email: user.email }, config.jwt.secret, {
-    expiresIn: "60 days",
-  });
+function generateJWT(user: User): string {
+  return jwt.sign(user.short(), config.jwt.secret);
 }
 
-/**
- * Middleware to validate if a valid user JWT auth token was sent in
- * request headers.
- * 
- * @param req Node Express Request object.
- * @param res Node Express Response object.
- * @param next Middleware next function.
- */
-function requireAuth(req: Request, res: Response, next: NextFunction) {
-  if (!req?.headers?.authorization) {
-    req.status = 401;
-    req.auth = false;
-    req.message = "No authorization headers.";
-    return next();
+export function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req.headers || !req.headers.authorization) {
+    return res.status(401).send({message: 'No authorization headers.'});
   }
-  const token_bearer = req.headers.authorization.split(" ");
-  if (token_bearer.length != 2) {
-    req.status = 401;
-    req.auth = false;
-    req.message = "Malformed token.";
-    return next();
-  }
-  const token = token_bearer[1];
 
+  const tokenBearer = req.headers.authorization.split(' ');
+  if (tokenBearer.length != 2) {
+    return res.status(401).send({message: 'Malformed token.'});
+  }
+
+  const token = tokenBearer[1];
   return jwt.verify(token, config.jwt.secret, (err, decoded) => {
     if (err) {
-      req.status = 500;
-      req.auth = false;
-      req.message = "Failed to authenticate.";
-      return next();
+      return res.status(500).send({auth: false, message: 'Failed to authenticate.'});
     }
-    req.status = 200;
-    req.auth = true;
-    req.message = "Authenticated.";
-
     return next();
   });
 }
 
-router.get("/verification", requireAuth, async (req: Request, res: Response) => {
-  return res.status(req.status).json({ auth: req.auth, message: req.message });
-});
+router.get('/verification',
+  requireAuth,
+  async (req: Request, res: Response) => {
+    return res.status(200).send({auth: true, message: 'Authenticated.'});
+  }
+);
 
-router.post("/login", async (req: Request, res: Response) => {
+router.post('/login', async (req: Request, res: Response) => {
   const email = req.body.email;
   const password = req.body.password;
+
   if (!email || !EmailValidator.validate(email)) {
-    return res.status(400).send({
-      auth: false,
-      error: { message: "Email is required or malformed" },
-    });
+    return res.status(400).send({auth: false, message: 'Email is required or malformed.'});
   }
+
   if (!password) {
-    return res.status(400).send({ auth: false, error: { message: "Password is required" } });
+    return res.status(400).send({auth: false, message: 'Password is required.'});
   }
+
   const user = await User.findByPk(email);
   if (!user) {
-    return res.status(401).send({ auth: false, error: { message: "Unauthorized" } });
+    return res.status(401).send({auth: false, message: 'User was not found..'});
   }
-  const authValid = await comparePasswords(password, user.password_hash);
-  if (!authValid) {
-    return res.status(401).send({ auth: false, error: { message: "Unauthorized" } });
-  }
-  const jwt = generateUserJWT(user);
 
-  return res.status(200).send({ auth: true, token: jwt, user: user.short() });
+  const authValid = await comparePasswords(password, user.password_hash);
+
+  if (!authValid) {
+    return res.status(401).send({auth: false, message: 'Password was invalid.'});
+  }
+
+  const jwt = generateJWT(user);
+  res.status(200).send({auth: true, token: jwt, user: user.short()});
 });
 
-router.post("/", async (req: Request, res: Response) => {
+router.post('/', async (req: Request, res: Response) => {
   const email = req.body.email;
   const plainTextPassword = req.body.password;
+
   if (!email || !EmailValidator.validate(email)) {
-    return res.status(400).send({
-      auth: false,
-      error: { message: "Email is missing or malformed" },
-    });
+    return res.status(400).send({auth: false, message: 'Email is missing or malformed.'});
   }
+
   if (!plainTextPassword) {
-    return res.status(400).send({ auth: false, error: { message: "Password is required." } });
+    return res.status(400).send({auth: false, message: 'Password is required.'});
   }
+
   const user = await User.findByPk(email);
   if (user) {
-    return res
-      .status(422)
-      .send({ auth: false, error: { message: "User may already exists." } });
+    return res.status(422).send({auth: false, message: 'User already exists.'});
   }
-  const password_hash = await generatePassword(plainTextPassword);
-  const newUser = new User({
-    email: email,
-    password_hash: password_hash,
-  });
-  let savedUser;
-  try {
-    savedUser = await newUser.save();
-  } catch (e) {
-    throw e;
-  }
-  const jwt = generateUserJWT(savedUser);
 
-  return res.status(201).send({ token: jwt, user: savedUser.short() });
+  const generatedHash = await generatePassword(plainTextPassword);
+
+  const newUser = await new User({
+    email: email,
+    passwordHash: generatedHash,
+  });
+
+  const savedUser = await newUser.save();
+
+
+  const jwt = generateJWT(savedUser);
+  res.status(201).send({token: jwt, user: savedUser.short()});
 });
 
 router.get("/", async (req: Request, res: Response) => {

@@ -1,5 +1,4 @@
 import { Dialect } from 'sequelize/types';
-
 const dialect: Dialect = 'postgres';
 
 export const config = {
@@ -16,8 +15,4 @@ export const config = {
   jwt: {
     secret: process.env.JWT_SECRET,
   },
-  user_service_host: process.env.USER_SERVICE_HOST,
-  image_filter_service_host: process.env.IMAGE_FITLER_SERVICE_HOST,
-  feed_client_id: process.env.RESTAPI_FEED_CLIENT_ID,
-  feed_private_key: process.env.RESTAPI_FEED_PRIVATE_KEY,
 };

@@ -1,5 +1,4 @@
 import { Dialect } from 'sequelize/types';
-
 const dialect: Dialect = 'postgres';
 
 export const config = {

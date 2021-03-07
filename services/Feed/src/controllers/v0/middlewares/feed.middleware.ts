@@ -1,29 +1,36 @@
 import { Request, Response, NextFunction } from 'express';
-import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
+import * as jwt from "jsonwebtoken";
 import { config } from '../../../config/config';
 
-export async function requireAuth(req: Request, res: Response, next: NextFunction) {
-  let response: AxiosResponse;
-  let axiosConf: AxiosRequestConfig = { headers: { 'Content-Type': 'application/json' } };
-  if (req?.headers?.authorization) {
-    axiosConf.headers.Authorization = req.headers.authorization;
-  }
-  try {
-    response = await axios.get<{ auth: boolean; message: string }>(
-      `${config.user_service_host}/api/v0/users/auth/verification`,
-      axiosConf
-    );
-  } catch (error) {
-    return res
-      .status(error.response.status)
-      .send({ error: { message: error.response.data.message } });
-  }
-
-  if (response.data.auth) {
+export function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req?.headers?.authorization) {
+    req.status = 401;
+    req.auth = false;
+    req.message = "No authorization headers.";
     return next();
-  } else {
-    return res.status(response.status).send({ error: { message: response.data.message } });
   }
+  const token_bearer = req.headers.authorization.split(" ");
+  if (token_bearer.length != 2) {
+    req.status = 401;
+    req.auth = false;
+    req.message = "Malformed token.";
+    return next();
+  }
+  const token = token_bearer[1];
+
+  return jwt.verify(token, config.jwt.secret, (err, decoded) => {
+    if (err) {
+      req.status = 500;
+      req.auth = false;
+      req.message = "Failed to authenticate.";
+      return next();
+    }
+    req.status = 200;
+    req.auth = true;
+    req.message = "Authenticated.";
+
+    return next();
+  });
 }
 
 export function requireFeedData(req: Request, res: Response, next: NextFunction) {
